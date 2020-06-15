@@ -13,6 +13,7 @@ import (
 const (
 	locationServer = "localhost:50505"
 	storyServer    = "localhost:50506"
+	voteServer     = "localhost:50507"
 )
 
 func main() {
@@ -33,12 +34,12 @@ func main() {
 	ctx1, cancel1 := context.WithTimeout(context.Background(), time.Second)
 	defer cancel1()
 
-	r, err := lsClient.GetLocations(ctx1, &request)
+	r1, err := lsClient.GetLocations(ctx1, &request)
 	if err != nil {
 		log.Fatalf("Location service error: %v", err)
 	}
 
-	log.Printf("Locations: %v", r.GetLocations())
+	log.Printf("Locations: %v", r1.GetLocations())
 
 	// Set up a connection to the story server.
 	ssConn, err := grpc.Dial(storyServer, grpc.WithInsecure(), grpc.WithBlock())
@@ -47,9 +48,8 @@ func main() {
 	}
 	defer ssConn.Close()
 
-	cs := pb.NewStoryServiceClient(ssConn)
+	ssClient := pb.NewStoryServiceClient(ssConn)
 
-	// locationIds := [2]string{"loc-123", "loc-456"}
 	var locationIds []string
 	locationIds = append(locationIds, "loc-123")
 	locationIds = append(locationIds, "loc-456")
@@ -60,10 +60,34 @@ func main() {
 	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second)
 	defer cancel2()
 
-	rs, err := cs.GetStories(ctx2, &storyRequest)
+	r2, err := ssClient.GetStories(ctx2, &storyRequest)
 	if err != nil {
 		log.Fatalf("Story service error: %v", err)
 	}
 
-	log.Printf("Stories: %v", rs.GetStories())
+	log.Printf("Stories: %v", r2.GetStories())
+
+	// Set up a connection to the vote server.
+	vsConn, err := grpc.Dial(voteServer, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("Story server did not connect: %v", err)
+	}
+	defer ssConn.Close()
+
+	vsClient := pb.NewVoteServiceClient(vsConn)
+
+	contextID := "s-123"
+
+	var voteRequest pb.VoteRequest
+	voteRequest.ContextId = contextID
+
+	ctx3, cancel3 := context.WithTimeout(context.Background(), time.Second)
+	defer cancel3()
+
+	rs, err := vsClient.GetVotes(ctx3, &voteRequest)
+	if err != nil {
+		log.Fatalf("Story service error: %v", err)
+	}
+
+	log.Printf("Stories: %v", rs.GetVotes())
 }
